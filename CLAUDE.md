@@ -1,11 +1,8 @@
 ---
 lane: shared                     # work | home | shared
-voice: home                      # which 00-resources voice file to load
-pad-workspace: command-center    # where ideas/plans/tasks for this project are created
 skills: []                       # personas/skills to adopt for this project (none)
 attach:                          # shared-context folders this project pulls
   - shared-context/_universal
-outputs: outputs/home/coworkos-unification
 ---
 
 @../../shared-context/_universal/CLAUDE.md
