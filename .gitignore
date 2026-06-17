@@ -1,0 +1,10 @@
+# Editor / tooling backups
+*.bak
+.playwright-mcp/
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Local scratch outputs (final deliverables live in root outputs/<lane>/)
+outputs/
