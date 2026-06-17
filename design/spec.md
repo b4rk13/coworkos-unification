@@ -2,7 +2,8 @@
 
 *Status: spec — ready for build (2026-06-16) · Owner: David*
 *Architecture (source of truth): [`design/architecture.md`](./architecture.md) — Approach B: shared tree, lane-as-tag*
-*Tracking: pad PLAN-137 (command-center, project: general) · Feeds Phase-3 build tasks TASK-140 through TASK-148*
+*Tracking: pad PLAN-137 (command-center, project: general) · Feeds Phase-3 build tasks TASK-140 through TASK-148, plus memory tasks TASK-167 (primary) / TASK-143 / TASK-169*
+*Memory section revised 2026-06-17: lane now spans three stores (typed-curated primary + per-surface auto-memory children), so the system works in both Cowork and Claude Code.*
 
 ---
 
@@ -20,7 +21,9 @@ absolute from the repo root `C:\Users\david\OneDrive\Documents\CoworkOS-Home\` (
 - [TASK-140 — Build the shared-context tree](#task-140--build-the-shared-context-tree)
 - [TASK-141 — Apply lane blocks + classify all projects](#task-141--apply-lane-blocks--classify-all-projects)
 - [TASK-142 — Update root config (outputs split, voice-work, routing)](#task-142--update-root-config-outputs-split-voice-work-routing)
-- [TASK-143 — Add lane axis to 4-tier memory](#task-143--add-lane-axis-to-4-tier-memory)
+- [TASK-167 — Lane-map the typed curated memory (primary)](#task-167--lane-map-the-typed-curated-memory-primary)
+- [TASK-143 — Lane-tag the Claude Code session auto-memory (child of 167)](#task-143--lane-tag-the-claude-code-session-auto-memory-child-of-167)
+- [TASK-169 — Lane-tag the Cowork space auto-memory (child of 167)](#task-169--lane-tag-the-cowork-space-auto-memory-child-of-167)
 - [TASK-144 — Create Work pad workspace + wire pad-workspace routing](#task-144--create-work-pad-workspace--wire-pad-workspace-routing)
 - [TASK-147 — Define + apply standard project scaffold](#task-147--define--apply-standard-project-scaffold)
 - [TASK-148 — Retire workstations → projects + domain skills](#task-148--retire-workstations--projects--domain-skills)
@@ -94,11 +97,17 @@ routing table to pick a lane, then default `voice: home` until a project is in s
 
 ## Memory system
 
-- Read `memory/MEMORY.md` at session start; let it inform your work without announcing it.
-- When David says "remember this," write it immediately and confirm.
-- Each memory file carries both a `type` (user / feedback / project / reference) and a
-  `lane` (work / home / shared) in its frontmatter. Recall loads shared + the active lane and
-  de-prioritizes the other lane.
+- The shared brain is the typed curated `memory/` files (`user.md` / `feedback.md` /
+  `projects.md` / `reference.md`). Read all four at session start; let them inform your work
+  without announcing it. (There is no monolithic root `MEMORY.md` — the typed files are the
+  authoritative layer both surfaces read.)
+- Two axes per entry: a **type** (user / feedback / project / reference) and a **lane**
+  (`[work]` / `[home]` / `[shared]`). In the typed files lane is an **inline tag per entry**; each
+  surface's own auto-memory store (Cowork's space store; Claude Code's per-folder store) carries the
+  same lane in its native frontmatter. Types stay primary; lane is the orthogonal second axis.
+- **Recall:** prefer Shared entries plus the active lane's, and de-prioritize the other lane.
+- **Write:** when David says "remember this," write it immediately to the right typed file, stamp
+  the entry's `[lane]` tag, and confirm.
 
 ## Writing
 
@@ -176,7 +185,19 @@ attach:                         # shared-context folders this project pulls
   - shared-context/work/servicenow
 outputs: outputs/work/<project-slug>
 ---
+
+@../../shared-context/_universal/CLAUDE.md
+
+> **Base layer:** before acting, read `shared-context/_universal/CLAUDE.md` and follow it on top of
+> this file.
+
+# <Project>
 ```
+
+The `@import` line + the prose "Base layer" note go **immediately after the frontmatter, above the
+`# <Project>` heading** — they are how the project actually loads the universal base layer (see
+TASK-147's "Base-layer load — why both lines" for the rationale). Every project gets both lines, not
+just the frontmatter.
 
 **Field rules**
 - `lane` from the table. `voice` follows lane: work-lane → `work`, home/shared-lane → `home`
@@ -188,6 +209,17 @@ outputs: outputs/work/<project-slug>
   (see per-project notes below).
 - `outputs`: `outputs/<lane>/<project-slug>` where `<lane>` is `work` or `home` (shared projects
   use `home`). Slug = the project folder name, lowercased/hyphenated.
+- **base-layer load:** after the frontmatter, add the `@../../shared-context/_universal/CLAUDE.md`
+  import line **and** the prose "Base layer" instruction (above). The prose line is the
+  cross-surface guarantee; the import is the Claude Code convenience. Adjust `../../` if the project
+  isn't at `projects/<name>/` depth. Keep it relative (the repo git-syncs to non-Windows machines);
+  never put the import inside a code fence (fenced imports aren't evaluated).
+
+**Verify once before applying to all 14 (build note).** Drop the `@import` line into a single
+project's `CLAUDE.md`, start a Claude Code session in that project, and run `/memory` to confirm the
+`_universal` base layer is included **without a trust prompt** (imports are content-inclusion, not
+directory access, so it should load clean). Only after that passes, roll the import line across the
+remaining projects. The prose "Base layer" line can go in immediately — it has no such dependency.
 
 ### Standing instruction wording (goes in root CLAUDE.md, applied by TASK-142)
 
@@ -223,7 +255,7 @@ names — do not rename folders in this task; just add headers.
 
 **Example — `projects/nowaikit/CLAUDE.md` header (concrete):**
 
-```yaml
+```markdown
 ---
 lane: work
 voice: work
@@ -235,11 +267,18 @@ attach:
   - shared-context/work/servicenow
 outputs: outputs/work/nowaikit
 ---
+
+@../../shared-context/_universal/CLAUDE.md
+
+> **Base layer:** before acting, read `shared-context/_universal/CLAUDE.md` and follow it on top of
+> this file.
+
+# nowaikit
 ```
 
 **Example — `projects/cancer-treatment/CLAUDE.md` header (concrete):**
 
-```yaml
+```markdown
 ---
 lane: home
 voice: home
@@ -251,13 +290,22 @@ attach:
   - shared-context/home/family
 outputs: outputs/home/cancer-treatment
 ---
+
+@../../shared-context/_universal/CLAUDE.md
+
+> **Base layer:** before acting, read `shared-context/_universal/CLAUDE.md` and follow it on top of
+> this file.
+
+# cancer-treatment
 ```
 
 **Archive:** ensure `Jira-ALM Data Sync` lives under `./projects/_archive/` (TASK-148 handles the
 physical move if not already done); do not add a lane header to archived projects.
 
-**Acceptance:** every active project listed has a valid lane block matching the table; no active
-project is missing one; archived project has none.
+**Acceptance:** every active project listed has a valid lane block matching the table, **plus the
+base-layer load** (the `@../../shared-context/_universal/CLAUDE.md` import line and the prose "Base
+layer" instruction) immediately after the frontmatter; no active project is missing either; archived
+project has none.
 
 ---
 
@@ -361,42 +409,103 @@ Make these edits to `./CLAUDE.md`:
    > request against the routing table above; if nothing matches, default to the home lane and
    > `voice-principles.md`. When the match is genuinely ambiguous, ask which lane before acting.
 
+6. **Memory System section — defer to TASK-167.** The lane-aware read + write rules for root
+   `CLAUDE.md`'s Memory System section are owned by **TASK-167** (the primary memory task), which
+   lands right after 142 in the build order — do **not** rewrite that section here. This task only
+   touches voice, routing, outputs, and the lane-header instruction.
+
 **Acceptance:** `outputs/work` and `outputs/home` exist; `voice-work.md` matches the outline; root
 CLAUDE.md has the new voice rule, lane-header instruction, output rule, routing table, and
-lane-detection rule, with the old "always voice-principles" rule removed.
+lane-detection rule, with the old "always voice-principles" rule removed; the Memory System
+section's lane rules are left to TASK-167.
 
 ---
 
-## TASK-143 — Add lane axis to 4-tier memory
+## Memory — lane across three stores
 
-**Goal:** Every session auto-memory file carries both `type` and `lane`; `MEMORY.md` surfaces lane;
-recall honors the active lane. The 4-tier type structure (user / feedback / project / reference) is
-**unchanged** — this is an additive second axis, not a merge.
+The lane axis applies to **three** distinct memory stores, so the system works identically whether
+David is in Cowork (the primary surface) or Claude Code (deep coding). The 4-tier types
+(user / feedback / project / reference) are **unchanged** in all three — lane is an additive second
+axis, not a merge. One **primary** task owns the authoritative, surface-neutral lane layer
+(TASK-167); two **child** tasks enforce the same tag on each surface's private auto-memory
+(TASK-143 for Claude Code, TASK-169 for Cowork).
 
-> **Scope — read first.** This task modifies the **session auto-memory** files managed by Claude
-> Code's built-in memory system: the per-topic files (each with YAML frontmatter) under
-> `.claude/projects/CoworkOS-Home/memory/`. These are the files Claude reads at session start and
-> the only place a `lane:` key gets added.
->
-> It does **not** touch:
-> - **The CoworkOS root `memory/` folder** (`memory/user.md`, `feedback.md`, `projects.md`,
->   `reference.md`, `memory-sync.md`). Those are narrative, type-aggregated prose maintained by the
->   nightly `memory-sync` task — they have no per-fact YAML frontmatter to add `lane:` to. (Lane
->   awareness for that OneDrive backup, if ever wanted, is a separate future change; out of scope
->   here.)
-> - **Project-level `memory.md` files** (`projects/<name>/memory.md`). Each is already lane-scoped
->   by its project's lane declaration, so it needs nothing.
+> **Why three.** Both surfaces read the typed curated `memory/` files at session start (via root
+> `CLAUDE.md`), so that layer is the real hygiene boundary — tag it and both surfaces inherit lane.
+> But each surface *also* keeps a private auto-memory store it generates on its own: Claude Code's
+> is hard-isolated per project folder path; Cowork's is space-scoped with **no** project wall. We
+> tag both so neither can bleed, but neither is the boundary — the typed layer is.
+
+---
+
+## TASK-167 — Lane-map the typed curated memory (primary)
+
+**Goal:** The OneDrive root typed curated memory files carry an inline lane tag per entry, the
+nightly `memory-sync` stamps lane on everything it writes, and root + `_universal` CLAUDE.md honor
+lane on read and write. This is the **first-class** lane layer both surfaces share.
+
+**Scope:** `memory/user.md`, `memory/feedback.md`, `memory/projects.md`, `memory/reference.md`
+(type-aggregated narrative prose, curated nightly by `memory-sync`). These are read at session
+start by **both** Cowork and Claude Code, per root `CLAUDE.md`. Project-level
+`projects/<name>/memory.md` files are already lane-scoped by their project's lane declaration and
+need nothing.
+
+### Lane tag format (inline, not frontmatter)
+
+These files are prose with no per-fact frontmatter, so lane is an inline `[work]` / `[home]` /
+`[shared]` tag appended to each entry (per bullet / line). Assign `home` by default; `work` when the
+subject is clearly work (ServiceNow / ADT / capacity); `shared` when cross-cutting (the unification
+initiative, pad mechanics, memory plumbing). Example entry in `reference.md`:
+
+```markdown
+| pad (project tracker) | Self-hosted on Proxmox LXC 104 … `command-center` workspace. | `[shared]`
+```
+
+…or, for prose-style entries, a trailing tag: `… runs Sunday 9am. [home]`
+
+### memory-sync changes
+
+Extend `memory/memory-sync.md` so the nightly job **stamps the lane** on every entry it adds or
+edits (it already decides where each fact goes by type; it now also assigns the lane). Backfill lane
+tags on all existing entries across the four files in the same pass.
+
+### CLAUDE.md read + write rules
+
+Add to **both** root `CLAUDE.md` (Memory System section) and `shared-context/_universal/CLAUDE.md`:
+
+> Each typed memory entry carries a `[work]` / `[home]` / `[shared]` tag. **Read:** at session start
+> load all four typed files, prefer the Shared entries plus the active lane's, and de-prioritize the
+> other lane. **Write:** when "remember this" appends to a typed file, stamp the entry's lane tag.
+
+**Sequencing:** do this after lane headers + `_universal/CLAUDE.md` exist (TASK-140/141) — don't
+point sessions at a tag scheme before the files carry it.
+
+### Encoding
+
+Save all four files UTF-8 (no BOM); fix any existing smart-quote / em-dash mojibake while in there.
+From PowerShell use `-Encoding utf8`.
+
+**Acceptance:** all four typed files carry a lane tag on every entry; `memory-sync.md` stamps lane
+on add/edit; root + `_universal` CLAUDE.md carry the read + write rules; files are clean UTF-8.
+
+---
+
+## TASK-143 — Lane-tag the Claude Code session auto-memory (child of 167)
+
+**Goal:** Claude Code's own session auto-memory carries `lane` in frontmatter so a multi-lane coding
+session can't bleed, and its index surfaces lane. *Implements TASK-167 on the Claude Code surface.*
+
+**Scope:** the per-topic files (each with YAML frontmatter) + `MEMORY.md` index that **Claude Code**
+maintains under `~/.claude/projects/<encoded-path>/memory/`. This store is **Claude Code only** and
+already hard-isolated per project folder path — lane handles multi-lane sessions and shared facts
+within it. It does **not** touch the typed curated `memory/` files (TASK-167) or the Cowork store
+(TASK-169).
 
 ### Frontmatter field
 
-Add a `lane:` key to each session auto-memory file's frontmatter. Allowed values:
-`work | home | shared`. Default existing personal memories to `home` unless their subject is clearly
-work (ServiceNow / ADT / capacity) → `work`, or cross-cutting (e.g. the unification initiative, pad
-mechanics) → `shared`.
-
-**Before / after example** — the unification initiative entry *(file is in session auto-memory at
-`.claude/projects/CoworkOS-Home/memory/coworkos-unification.md` — NOT in the CoworkOS root
-`memory/` folder)*:
+Add a `lane:` key (`work | home | shared`) to each file's frontmatter, alongside the unchanged
+`type`. Default `home` unless the subject is clearly work (ServiceNow / ADT / capacity) → `work`, or
+cross-cutting → `shared`.
 
 Before:
 ```markdown
@@ -417,74 +526,65 @@ updated: 2026-06-16
 ---
 ```
 
-**Before / after example** — a work memory (also a session auto-memory file):
-
-Before:
-```markdown
----
-type: reference
-title: ADT capacity management — SPM table map
----
-```
-
-After:
-```markdown
----
-type: reference
-lane: work
-title: ADT capacity management — SPM table map
----
-```
-
-### Lane assignment for current memory files
-
-Current session auto-memory files (under `.claude/projects/CoworkOS-Home/memory/`) and their lane
-assignments:
-
-| Session auto-memory file | type (unchanged) | lane |
-|---|---|---|
-| pad-item-custom-fields.md | reference | shared |
-| pad-task-sweep-cadence.md | reference | shared |
-| coworkos-unification.md | project | shared |
-| user.md (voice / tone / comms prefs) | user | home |
-| feedback.md | feedback | home |
-| projects.md | project | home |
-| reference.md | reference | home |
-
-Reassign any of the above to `work` if its subject is clearly work (ServiceNow / ADT / capacity).
-New work-subject files added later follow the same rule.
-
 ### MEMORY.md surfacing
 
-`MEMORY.md` keeps its **type-first** organization (the index). Surface lane per entry by appending
-a tag to each index line, and optionally sub-group Work / Home / Shared within a type. Example
-index line:
+Keep the index's type-first organization; append a `` `[lane]` `` tag to each index line (optionally
+sub-group `### Shared` / `### Work` / `### Home` within a type). Example:
 
 ```markdown
 - [coworkos-unification](coworkos-unification.md) `[shared]` — merging work+home into one
   lane-segregated root (Approach B); design signed off, tracked in pad PLAN-137.
 ```
 
-If sub-grouping, use small sub-headings under a type section: `### Shared`, `### Work`, `### Home`.
+### Recall rule + encoding
 
-### Recall rule
+Recall: load shared + the active lane, de-prioritize the other (folder-path isolation already
+separates projects). The shared read/write rule from TASK-167's `_universal/CLAUDE.md` covers this
+surface too. While editing, fix any SessionStart charmap / mojibake warnings; save UTF-8, no BOM.
 
-Add to `_universal/CLAUDE.md` memory section (and reflect in root CLAUDE.md): already drafted in
-TASK-140's `_universal/CLAUDE.md` content —
+**Acceptance:** every Claude Code session-auto-memory file has a valid `lane:` in frontmatter; types
+untouched; that store's `MEMORY.md` shows lane per entry; no SessionStart encoding warnings remain.
 
-> Each memory file carries both a `type` and a `lane`. Recall loads shared + the active lane and
-> de-prioritizes the other lane. Hard isolation remains automatic for Code projects (separate
-> folder paths → separate auto-memory).
+---
 
-### Encoding fix
+## TASK-169 — Lane-tag the Cowork space auto-memory (child of 167)
 
-While editing, fix any encoding warnings on the memory files (the known issue: smart quotes /
-em-dashes saved as mojibake). Save all memory files as UTF-8 (no BOM). When writing from PowerShell
-use `-Encoding utf8`.
+**Goal:** Cowork's own space-scoped auto-memory carries `lane` and recall honors it — closing the
+biggest bleed gap, since Cowork is the primary surface yet its store has **no** automatic lane wall.
+*Implements TASK-167 on the Cowork surface.*
 
-**Acceptance:** every session auto-memory per-topic file has a valid `lane:` in frontmatter; types
-untouched; MEMORY.md shows lane per entry; recall rule present in `_universal/CLAUDE.md`; no
-encoding warnings remain.
+**Scope:** the per-fact `.md` files + `MEMORY.md` index Cowork maintains in its space-scoped store
+(e.g. `…/spaces/<space-id>/memory/`). This store is **Cowork only** and is scoped to the Cowork
+space, **not** isolated per project — so unlike Claude Code there is no folder-path wall; the lane
+tag is the only separation.
+
+### Frontmatter field (Cowork's native schema)
+
+Cowork auto-memory files use frontmatter with `name`, `description`, and a nested `metadata` block
+that already holds `type`. Add `lane` **under `metadata`**, alongside `type`:
+
+```markdown
+---
+name: pad-workspace-routing
+description: Which pad board each lane targets and when to call pad_set_workspace.
+metadata:
+  type: reference
+  lane: shared
+---
+```
+
+Same default rule: `home` unless clearly work → `work`, or cross-cutting → `shared`.
+
+### MEMORY.md surfacing + recall
+
+Append a `` `[lane]` `` tag to each `MEMORY.md` index line (same format as TASK-143). Recall on this
+surface is relevance-surfaced (description-ranked, shown in system-reminders), not folder-isolated,
+so the lane preference must be an explicit instruction: the TASK-167 read rule in `_universal` /
+root CLAUDE.md ("prefer shared + the active lane") governs Cowork recall.
+
+**Acceptance:** every Cowork space-auto-memory file carries `lane` under `metadata` (types
+unchanged); its `MEMORY.md` surfaces lane per entry; the shared + active-lane recall rule is present
+and applies to the Cowork surface.
 
 ---
 
@@ -492,9 +592,10 @@ encoding warnings remain.
 
 *(This task has its own primary owner; this section is the cross-referenced spec it builds to.)*
 
-**Goal:** A `work` pad workspace exists, and the `/pad` skill + routines target the workspace named
-in each project's `pad-workspace:` field before creating any item. `pad-snapshot` becomes
-lane-aware.
+**Goal:** A `work` pad workspace exists, and every path that creates pad items targets the
+workspace named in each project's `pad-workspace:` field before creating. **`pad-workspace:` is
+authoritative — never create on the session-default board without resolving it first.**
+`pad-snapshot` becomes lane-aware.
 
 ### Create the workspace
 
@@ -505,9 +606,8 @@ collection lifecycle (`tasks` collection; statuses `backlog → ready → in-pro
 
 ### Wire `pad-workspace:` routing
 
-The `/pad` skill and every routine that creates pad items must resolve the target workspace from
-the active project's `pad-workspace:` header and call `pad_set_workspace` **before** any
-create/update. Logic snippet to embed in the `/pad` skill:
+Every path that creates pad items must resolve the target workspace from the active project's
+`pad-workspace:` header and call `pad_set_workspace` **before** any create/update, using this logic:
 
 ```text
 1. Determine active project (folder in scope, or the project named in the request).
@@ -519,9 +619,22 @@ create/update. Logic snippet to embed in the `/pad` skill:
 4. Create/update the item. Never create on the session-default board without this resolve step.
 ```
 
-Apply the same resolve-then-`pad_set_workspace` step at the top of the overnight/sweep routine
-(`pad-ai-task-sweep` and `pad-idea-triage`) so an overnight work task never lands on the personal
-board.
+**Where this gets wired — two paths, two homes.** Note the `/pad` skill is a **bundled** skill at
+`.claude/skills/pad/SKILL.md` — it is *not* a custom skill in the root `Skills/` source-of-truth
+(today only `wrap-up` lives there), so do **not** fork or hand-edit it. Wire the two paths instead:
+
+- **Interactive (`/pad`):** enforced by the **standing instruction in root `CLAUDE.md` +
+  `shared-context/_universal/CLAUDE.md`** (the `_universal` Memory/board step: "Target the board
+  named in `pad-workspace:` … call `pad_set_workspace` first"). The agent runs the
+  resolve-then-`pad_set_workspace` step *around* the bundled skill; the skill itself is untouched.
+- **Autonomous routines:** bake the resolve step into the **routine prompt files David owns** —
+  `projects/personal-knowledge-brain/pad/routine-prompt.md` (`pad-ai-task-sweep`),
+  `projects/personal-knowledge-brain/pad/idea-triage-routine-prompt.md` (`pad-idea-triage`), and
+  `projects/personal-knowledge-brain/pad/dreaming-routine-prompt.md` (`pad-dreaming`) — so an
+  overnight work task never lands on the personal board.
+- **Backstop (recommended):** add a pad **Convention** card (`CONVE`, trigger `always`) — "resolve
+  `pad-workspace:` and call `pad_set_workspace` before creating any item" — so the rule is visible
+  to every routine that loads conventions, independent of any one prompt file.
 
 ### Lane-aware `pad-snapshot`
 
@@ -533,9 +646,10 @@ The `pad-idea-triage` routine regenerates both nightly: set workspace to `comman
 to `pad-snapshot.md`; set workspace to `work`, dump to `pad-snapshot-work.md`. Each file keeps the
 existing snapshot format (board columns → cards). Both remain read-caches; pad is source of truth.
 
-**Acceptance:** `work` workspace exists with matching lifecycle/fields; `/pad` skill and routines
-resolve `pad-workspace:` and call `pad_set_workspace` before creating; both snapshot files
-generated nightly.
+**Acceptance:** `work` workspace exists with matching lifecycle/fields; the resolve-then-
+`pad_set_workspace` step is enforced on both paths (interactive via the root + `_universal`
+CLAUDE.md standing instruction; routines via their prompt files — the bundled `/pad` skill is not
+forked); both snapshot files generated nightly.
 
 ---
 
@@ -583,7 +697,13 @@ attach:
 outputs: outputs/home/<project-slug>
 ---
 
+@../../shared-context/_universal/CLAUDE.md
+
 # <Project Name>
+
+> **Base layer:** before acting, read `shared-context/_universal/CLAUDE.md` and follow it on top of
+> this file. (The `@import` line above auto-loads it in Claude Code; this prose instruction is the
+> cross-surface guarantee — it loads the base layer in Cowork too.)
 
 ## Identity
 One paragraph: what this project is, what routes here, what doesn't.
@@ -598,6 +718,34 @@ What "done" looks like for this project.
 ## Working notes
 - Decisions and gotchas worth keeping in front of mind.
 ```
+
+**Base-layer load — why both lines.** Listing `shared-context/_universal` in `attach:` makes the
+folder *readable*, but neither surface loads its `CLAUDE.md` *as instructions* from that alone:
+Cowork only reads attach paths because the root CLAUDE.md tells it to, and Claude Code's automatic
+parent-directory discovery climbs the path to root (so it picks up the root `CLAUDE.md`) but never
+descends into a **sibling subtree** like `shared-context/`. So make the load explicit, two ways:
+
+- **The prose "Base layer" line — load-bearing.** Cowork does **not** honor `@import` (it's a Claude
+  Code memory feature), so the plain instruction to read the base layer is what Cowork relies on.
+  Both surfaces follow it. This is the authoritative mechanism — keep it.
+- **`@../../shared-context/_universal/CLAUDE.md` — Code convenience.** Claude Code evaluates `@path`
+  imports inside any CLAUDE.md it loads, resolving the path relative to the file containing the line;
+  from `projects/<name>/CLAUDE.md`, `../../` walks to the root and down into
+  `shared-context/_universal/`. Because `_universal/` is a sibling subtree (not an ancestor of the
+  project), the import is what pulls it in — no `--add-dir` needed — and it makes inclusion eager and
+  deterministic rather than relying on the agent acting on the prose. *(Confirmed via Claude Code,
+  2026-06-17: import resolves above the session cwd as content-inclusion, not directory access.)*
+
+**Convention caveats (apply in TASK-141):**
+- **Relative, never absolute.** The repo git-syncs to the MacBook / work laptop, so an absolute
+  `C:\Users\david\…` path would break off-Windows; `../../` ports cleanly.
+- **Depth must match nesting.** `../../` assumes every project sits at `projects/<name>/`. A nested
+  or differently-placed project needs a different depth — this works as a uniform rule only because
+  the scaffold puts all projects one level under `projects/`.
+- **Not inside a code fence.** Imports in fenced/inline code aren't evaluated; the live import line
+  goes in each real project `CLAUDE.md` as plain text. (The `_universal/CLAUDE.md` body shown fenced
+  elsewhere in this spec is template text — correctly not evaluated.)
+- **Import depth:** Claude Code resolves nested imports up to 5 hops; this scheme is 1 hop.
 
 **`project-template/status.md` skeleton:**
 
@@ -622,7 +770,8 @@ Run at end of session for this project. Steps:
 1. Update `status.md` (Done / In-progress / Next / Blockers) from this session's work.
 2. Append durable decisions/gotchas to `memory.md`.
 3. Refresh `docs/index.md` if docs were added or moved.
-4. Update root memory (`memory/`) only for facts that outlive this project.
+4. Update root memory (`memory/`) only for facts that outlive this project — stamp each new
+   entry's `[work]`/`[home]`/`[shared]` lane tag (per TASK-167).
 5. Emit the git commit command (do not commit unless asked).
 
 Project-specific notes:
@@ -657,9 +806,10 @@ For each active project:
 3. Replace any per-project wrap-up **skill** with a `wrap-up.md` in the project (IDEA-115). The
    shared `wrap-up` skill should defer to the project's `wrap-up.md` when present.
 
-**Acceptance:** template exists at the specified path with all spine files; active projects have
-the spine; top-level `architecture/` folders consolidated under `docs/architecture/`; per-project
-wrap-up skills replaced by `wrap-up.md`.
+**Acceptance:** template exists at the specified path with all spine files; the template
+`CLAUDE.md` carries the base-layer load (the `@../../shared-context/_universal/CLAUDE.md` import +
+the prose "Base layer" instruction); active projects have the spine; top-level `architecture/`
+folders consolidated under `docs/architecture/`; per-project wrap-up skills replaced by `wrap-up.md`.
 
 ---
 
@@ -729,9 +879,13 @@ and is deployed; root routing no longer references workstations.
 
 Recommended sequence (dependencies in parentheses): **140** (tree + `_universal/CLAUDE.md`) →
 **147** (template, lives in `_universal/`) → **141** (lane headers; uses attach paths from 140) →
-**142** (root config + outputs + voice; references 141's standing instruction) → **143** (memory
-lane axis) → **144** (pad workspace + routing; `/pad` references 141 headers) → **148**
-(retire workstations; depends on 140's `shared-context/home/` being ready). 143 and 144 can run
-in parallel once 142 lands.
+**142** (root config + outputs + voice; references 141's standing instruction) → **167** (primary
+memory: typed-curated lane tags + `memory-sync` + CLAUDE.md read/write rules) → **143** + **169**
+(per-surface auto-memory children; each enforces 167's scheme — 143 on Claude Code, 169 on Cowork) →
+**144** (pad workspace + routing; `/pad` references 141 headers) → **148** (retire workstations;
+depends on 140's `shared-context/home/` being ready).
+
+Memory ordering matters: **167 lands first** (it defines the lane scheme and the CLAUDE.md rules the
+children rely on), then 143 and 169 can run in parallel. 144 can also run in parallel once 142 lands.
 
 *End of spec.*

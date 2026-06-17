@@ -28,11 +28,19 @@ domain "workstations." A `Shared Context/` area holds domain subfolders (`ADT/`,
 connected project loads on top of its own. Behavior lives in skills.
 
 **Two surfaces, different constraints:**
-- **Cowork** (sandboxed): document creation, general work + personal projects. Cannot run
-  git/PowerShell. Works best navigating a preset root folder structure with routing.
-- **Claude Code:** code projects (e.g. treatment-collab-suite, work ServiceNow) needing
-  git/PowerShell — context folders are attached per session, John-style. Code projects
-  also get **automatic memory isolation** because each lives at its own folder path.
+- **Cowork** (sandboxed, the **primary** working front): document creation, general work +
+  personal projects. Cannot run git/PowerShell. Works best navigating a preset root folder
+  structure with routing. Keeps its own **space-scoped** auto-memory store (not isolated per
+  project).
+- **Claude Code** (deep coding sessions): code projects (e.g. treatment-collab-suite, work
+  ServiceNow) needing git/PowerShell — context folders are attached per session, John-style.
+  Keeps its own **per-folder** auto-memory store, hard-isolated by project path.
+
+Both surfaces read the same shared brain — the typed curated `memory/` files — via a root
+`CLAUDE.md` instruction. Lane hygiene therefore lives **there** (surface-neutral), not in either
+surface's private auto-memory; each private store then enforces the same lane tag on its own side
+(see §5). The Claude Code folder-path isolation is a bonus, not the hygiene mechanism — Cowork,
+the primary surface, has no such automatic wall.
 
 ---
 
@@ -128,8 +136,17 @@ outputs: outputs/work/servicenow-spm
   lane header; load the matching voice + pad workspace + skills; treat `attach:` paths as the
   project's context."* One synced tree, so attach paths are already readable.
 - **Claude Code (code projects):** the project's own `CLAUDE.md` loads automatically; the
-  `attach:` list names the `shared-context/...` folders to add as additional working dirs that
-  session; the `skills:` list names personas to invoke at start.
+  `attach:` list names the `shared-context/...` folders the session pulls; the `skills:` list names
+  personas to invoke at start.
+
+**Loading the universal base layer.** `attach:` makes a folder *readable*, but neither surface loads
+`_universal/CLAUDE.md` *as instructions* from that alone — so every project `CLAUDE.md` carries an
+explicit base-layer load right after its lane header: a prose *"read `shared-context/_universal/CLAUDE.md`
+and follow it on top of this file"* line plus a Claude Code `@../../shared-context/_universal/CLAUDE.md`
+import. The **prose line is load-bearing and surface-neutral** (Cowork does not honor `@import`); the
+import is a Code convenience that makes inclusion eager and deterministic (Code's parent-directory
+discovery reaches the root `CLAUDE.md` but never a sibling subtree like `shared-context/`). The spec
+(TASK-141 / TASK-147) is the source for the exact lines and caveats.
 
 ---
 
@@ -143,20 +160,34 @@ outputs: outputs/work/servicenow-spm
   on the personal board.
 - `pad-snapshot.md` becomes lane-aware (two files, or one with Work/Home sections).
 
-**memory (keep the 4-tier types; add lane as a second axis — enhancement, not a merge)**
-- The existing typed memory (user / feedback / project / reference) is **unchanged** — types stay
-  the primary structure. We are NOT reverting to one tagged file.
-- "Memory" here means the **session auto-memory** files Claude Code manages (the per-topic files
-  with YAML frontmatter under `.claude/projects/CoworkOS-Home/memory/`) — that is where the `lane:`
-  axis is added. The OneDrive root `memory/` folder (narrative `user.md` / `feedback.md` / etc.
-  written by the nightly `memory-sync`) is a separate, un-frontmattered backup and is out of scope
-  for the lane tag.
-- Add an orthogonal `lane: work | home | shared` to each memory's frontmatter, so every fact now
-  carries **both** a `type` and a `lane` (a 2-D classification).
-- `MEMORY.md` keeps its type organization and gains a lane marker per entry (optionally
-  sub-grouping Work / Home / Shared within a type). Recall loads shared + the active lane and
-  de-prioritizes the other.
-- Hard isolation is still automatic for Code projects (separate folder paths → separate auto-memory).
+**memory (keep the 4-tier types; add lane as a second axis across all three stores — enhancement, not a merge)**
+
+The 4-tier types (user / feedback / project / reference) are **unchanged** — types stay the
+primary structure. We are NOT reverting to one tagged file. Lane is an orthogonal second axis, so
+every fact carries **both** a `type` and a `lane`. There are **three** memory stores in play, and
+lane is applied to all three — but they are not equal:
+
+1. **Typed curated `memory/` — first-class, surface-neutral lane carrier (TASK-167, primary).**
+   `memory/{user,feedback,projects,reference}.md` — type-aggregated prose, curated nightly by
+   `memory-sync`, and read at session start by **both** surfaces via root `CLAUDE.md`. This is the
+   shared brain and the authoritative place lane lives. Because these are prose (no per-fact
+   frontmatter), lane is an inline `[work]` / `[home]` / `[shared]` tag per entry. Recall (read):
+   load shared + the active lane, de-prioritize the other. Write: when "remember this" writes a
+   typed entry, stamp its lane.
+2. **Claude Code session auto-memory (TASK-143, Code child).** The per-topic files with YAML
+   frontmatter under `~/.claude/projects/<encoded-path>/memory/` (+ its `MEMORY.md` index) that
+   Claude Code maintains itself. Already hard-isolated per folder path; add `lane:` to frontmatter
+   and a lane marker in its `MEMORY.md` so a multi-lane Code session can't bleed.
+3. **Cowork space auto-memory (TASK-169, Cowork child).** The per-fact files (`metadata.type`
+   frontmatter) + `MEMORY.md` index Cowork maintains in its space-scoped store. Cowork is the
+   primary surface but this store is space-scoped, **not** project-isolated — so it has no
+   automatic lane wall and enforcement matters most here. Add `lane` under each file's `metadata`
+   and a `[lane]` marker per `MEMORY.md` entry; recall honors the active lane.
+
+The two per-surface auto-memory stores are private scratch each tool generates; they enforce the
+same lane tag on their own side, but the typed curated layer (1) is the hygiene boundary. `MEMORY.md`
+indexes keep their type organization and surface lane per entry. Hard path isolation in Claude Code
+is a bonus, not the mechanism.
 
 **behavior layer (skills replace workstations)**
 - `workstations/` is folded into `projects/`. Always-on, non-project domains become **skills**
@@ -267,6 +298,15 @@ _None — all resolved (see §10). Design signed off 2026-06-16._
 - **Memory enhanced, not merged (2026-06-16):** keep the 4-tier types; add `lane` as an
   orthogonal second axis. Each fact carries both `type` and `lane`; `MEMORY.md` keeps type
   organization and surfaces lane; recall loads shared + the active lane.
+- **Memory — typed curated layer is first-class for lane; both auto-memory stores enforce it
+  (updated 2026-06-17):** lane applies to **three** stores, not one. The typed curated `memory/`
+  files are the authoritative, surface-neutral lane carrier (**TASK-167, primary**), read by both
+  Cowork and Claude Code via root `CLAUDE.md`. The Claude Code session auto-memory (**TASK-143**)
+  and the Cowork space auto-memory (**TASK-169**) each get the same lane tag on their own store so
+  neither surface bleeds across lanes — TASK-143 and TASK-169 are children that *implement*
+  TASK-167's scheme on their surface. Supersedes the earlier framing that put lane only on the
+  Claude Code session auto-memory and treated the typed `memory/` folder as out of scope. Both
+  surfaces must work; the surface-neutral typed layer is what guarantees that.
 - **Lane classification locked (2026-06-16):** see §7 table. `Jira-ALM Data Sync` archived.
 - **pad-snapshot — two files (2026-06-16):** `pad-snapshot.md` (home/command-center) +
   `pad-snapshot-work.md` (Work board).
