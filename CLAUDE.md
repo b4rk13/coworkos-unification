@@ -8,6 +8,11 @@ attach:                          # shared-context folders this project pulls
 outputs: outputs/home/coworkos-unification
 ---
 
+@../../shared-context/_universal/CLAUDE.md
+
+> **Base layer:** before acting, read `shared-context/_universal/CLAUDE.md` and follow it on top of
+> this file.
+
 # CoworkOS Unification
 
 ## Identity
