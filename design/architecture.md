@@ -146,6 +146,11 @@ outputs: outputs/work/servicenow-spm
 **memory (keep the 4-tier types; add lane as a second axis — enhancement, not a merge)**
 - The existing typed memory (user / feedback / project / reference) is **unchanged** — types stay
   the primary structure. We are NOT reverting to one tagged file.
+- "Memory" here means the **session auto-memory** files Claude Code manages (the per-topic files
+  with YAML frontmatter under `.claude/projects/CoworkOS-Home/memory/`) — that is where the `lane:`
+  axis is added. The OneDrive root `memory/` folder (narrative `user.md` / `feedback.md` / etc.
+  written by the nightly `memory-sync`) is a separate, un-frontmattered backup and is out of scope
+  for the lane tag.
 - Add an orthogonal `lane: work | home | shared` to each memory's frontmatter, so every fact now
   carries **both** a `type` and a `lane` (a 2-D classification).
 - `MEMORY.md` keeps its type organization and gains a lane marker per entry (optionally

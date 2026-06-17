@@ -369,18 +369,34 @@ lane-detection rule, with the old "always voice-principles" rule removed.
 
 ## TASK-143 — Add lane axis to 4-tier memory
 
-**Goal:** Every memory file carries both `type` and `lane`; `MEMORY.md` surfaces lane; recall
-honors the active lane. The 4-tier type structure (user / feedback / project / reference) is
+**Goal:** Every session auto-memory file carries both `type` and `lane`; `MEMORY.md` surfaces lane;
+recall honors the active lane. The 4-tier type structure (user / feedback / project / reference) is
 **unchanged** — this is an additive second axis, not a merge.
+
+> **Scope — read first.** This task modifies the **session auto-memory** files managed by Claude
+> Code's built-in memory system: the per-topic files (each with YAML frontmatter) under
+> `.claude/projects/CoworkOS-Home/memory/`. These are the files Claude reads at session start and
+> the only place a `lane:` key gets added.
+>
+> It does **not** touch:
+> - **The CoworkOS root `memory/` folder** (`memory/user.md`, `feedback.md`, `projects.md`,
+>   `reference.md`, `memory-sync.md`). Those are narrative, type-aggregated prose maintained by the
+>   nightly `memory-sync` task — they have no per-fact YAML frontmatter to add `lane:` to. (Lane
+>   awareness for that OneDrive backup, if ever wanted, is a separate future change; out of scope
+>   here.)
+> - **Project-level `memory.md` files** (`projects/<name>/memory.md`). Each is already lane-scoped
+>   by its project's lane declaration, so it needs nothing.
 
 ### Frontmatter field
 
-Add a `lane:` key to each memory file's frontmatter. Allowed values: `work | home | shared`.
-Default existing personal memories to `home` unless their subject is clearly work (ServiceNow /
-ADT / capacity) → `work`, or cross-cutting (e.g. the unification initiative, pad mechanics) →
-`shared`.
+Add a `lane:` key to each session auto-memory file's frontmatter. Allowed values:
+`work | home | shared`. Default existing personal memories to `home` unless their subject is clearly
+work (ServiceNow / ADT / capacity) → `work`, or cross-cutting (e.g. the unification initiative, pad
+mechanics) → `shared`.
 
-**Before / after example** — `memory/coworkos-unification.md` (the unification initiative entry):
+**Before / after example** — the unification initiative entry *(file is in session auto-memory at
+`.claude/projects/CoworkOS-Home/memory/coworkos-unification.md` — NOT in the CoworkOS root
+`memory/` folder)*:
 
 Before:
 ```markdown
@@ -401,7 +417,7 @@ updated: 2026-06-16
 ---
 ```
 
-**Before / after example** — a work memory:
+**Before / after example** — a work memory (also a session auto-memory file):
 
 Before:
 ```markdown
@@ -422,13 +438,21 @@ title: ADT capacity management — SPM table map
 
 ### Lane assignment for current memory files
 
-| Memory file | type (unchanged) | lane |
+Current session auto-memory files (under `.claude/projects/CoworkOS-Home/memory/`) and their lane
+assignments:
+
+| Session auto-memory file | type (unchanged) | lane |
 |---|---|---|
 | pad-item-custom-fields.md | reference | shared |
 | pad-task-sweep-cadence.md | reference | shared |
 | coworkos-unification.md | project | shared |
-| (user/feedback prefs about voice, tone, comms) | user / feedback | home |
-| (any ServiceNow/ADT/capacity facts) | reference / project | work |
+| user.md (voice / tone / comms prefs) | user | home |
+| feedback.md | feedback | home |
+| projects.md | project | home |
+| reference.md | reference | home |
+
+Reassign any of the above to `work` if its subject is clearly work (ServiceNow / ADT / capacity).
+New work-subject files added later follow the same rule.
 
 ### MEMORY.md surfacing
 
@@ -458,8 +482,9 @@ While editing, fix any encoding warnings on the memory files (the known issue: s
 em-dashes saved as mojibake). Save all memory files as UTF-8 (no BOM). When writing from PowerShell
 use `-Encoding utf8`.
 
-**Acceptance:** every memory file has a valid `lane:`; types untouched; MEMORY.md shows lane per
-entry; recall rule present; no encoding warnings remain.
+**Acceptance:** every session auto-memory per-topic file has a valid `lane:` in frontmatter; types
+untouched; MEMORY.md shows lane per entry; recall rule present in `_universal/CLAUDE.md`; no
+encoding warnings remain.
 
 ---
 
