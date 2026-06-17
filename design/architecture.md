@@ -110,26 +110,34 @@ wall — the project announces its lane and everything downstream follows.
 
 ```yaml
 ---
-lane: work                      # work | home | shared
-voice: work                     # which 00-resources voice file to load
-pad-workspace: work             # where tasks/ideas/plans get created (Work board)
-skills:                         # personas/skills to adopt for this project
+lane: work                      # work | home | shared  — the one declared hygiene field
+skills:                         # personas to adopt (project-specific; not derivable)
   - sn-spm-architect
-attach:                         # shared-context folders this project pulls
+attach:                         # shared-context folders this project pulls (project-specific)
   - shared-context/_universal
   - shared-context/work/servicenow
-outputs: outputs/work/servicenow-spm
 ---
 ```
 
-**Field semantics**
-- `lane` — the hygiene boundary. Sets the default register and which identity context applies.
-- `voice` — which `00-resources` voice file to load (`home` → voice-principles.md, `work` → voice-work.md).
-- `pad-workspace` — authoritative target board for ideas/plans/tasks (`command-center` or `work`).
-- `skills` — persona/expertise skills to invoke at session start (e.g. `sn-spm-architect`
-  on ServiceNow SPM projects). Sets the *expertise persona*, composing with `lane`'s register.
-- `attach` — `shared-context/...` folders this project pulls.
-- `outputs` — deliverable path for this project.
+**Declared fields** (all a header carries by default):
+- `lane` — the hygiene boundary, and the single source from which voice / board / outputs derive.
+- `skills` — persona/expertise skills to invoke at session start (project-specific; e.g.
+  `sn-spm-architect`), composing with `lane`'s register. `skills: []` if none.
+- `attach` — the `shared-context/...` folders this project pulls (project-specific).
+
+**Derived from `lane` by rule** (defined once in `_universal/CLAUDE.md`; do **not** hand-declare
+unless overriding):
+
+| lane | voice | pad-workspace | outputs |
+|---|---|---|---|
+| work | work (voice-work.md) | work | outputs/work/&lt;slug&gt; |
+| home | home (voice-principles.md) | command-center | outputs/home/&lt;slug&gt; |
+| shared | home (voice-principles.md) | command-center | outputs/home/&lt;slug&gt; |
+
+`<slug>` = the project folder name, lowercased, spaces/underscores → hyphens. Declaring `voice:`,
+`pad-workspace:`, or `outputs:` in a header is an **override** — include one only to deviate from the
+rule (e.g. a folder whose desired output slug differs from its name). Normalizing this way sets lane
+once, so the three derived fields can't drift across 14 hand-maintained files.
 
 **Consumption per surface**
 - **Cowork (root sessions):** root `CLAUDE.md` rule — *"before acting in a project, read its
@@ -307,6 +315,14 @@ _None — all resolved (see §10). Design signed off 2026-06-16._
   TASK-167's scheme on their surface. Supersedes the earlier framing that put lane only on the
   Claude Code session auto-memory and treated the typed `memory/` folder as out of scope. Both
   surfaces must work; the surface-neutral typed layer is what guarantees that.
+- **Lane block normalized — declare `lane`, derive the rest (2026-06-17):** `voice`,
+  `pad-workspace`, and `outputs` are 100% derivable from `lane`, so declaring them in all 14 headers
+  is denormalization that invites drift. Headers now declare only `lane`, `skills`, and `attach`;
+  voice/board/outputs are **derived by rule** in `_universal/CLAUDE.md` (work → voice-work /
+  `work` / `outputs/work/<slug>`; home & shared → voice-principles / `command-center` /
+  `outputs/home/<slug>`). An explicit `voice:`/`pad-workspace:`/`outputs:` line is an **override**,
+  used only to deviate (e.g. `Capacity Managment` overrides `outputs` to fix its misspelled folder
+  slug). One source of truth per project; no cross-file drift. (Independent-review finding.)
 - **Lane classification locked (2026-06-16):** see §7 table. `Jira-ALM Data Sync` archived.
 - **pad-snapshot — two files (2026-06-16):** `pad-snapshot.md` (home/command-center) +
   `pad-snapshot-work.md` (Work board).

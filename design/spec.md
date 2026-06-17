@@ -79,21 +79,27 @@ project's own header).
 # Universal Base Layer
 
 Every CoworkOS project loads this file on top of its own CLAUDE.md. It holds the conventions
-that are true regardless of lane. Lane-specific behavior (voice, board, outputs) comes from the
-project's own lane-declaration header — read that first.
+that are true regardless of lane. Each project header declares only its **lane** (plus `skills:`
+and `attach:`); voice, pad board, and outputs are **derived from `lane`** by the rule below — not
+hand-declared.
 
-## Lane detection (do this before acting)
+## Lane → behavior (derive before acting)
 
-1. Read the current project's CLAUDE.md lane-declaration block (the YAML frontmatter at the top).
-2. Load the voice file it names (`voice: home` → `00-resources/voice-principles.md`;
-   `voice: work` → `00-resources/voice-work.md`).
+1. Read the current project's CLAUDE.md lane-declaration block (the YAML frontmatter at the top) —
+   it declares `lane`, `skills:`, and `attach:`.
+2. Derive these from `lane` (each can be **overridden** by an explicit field in the header):
+   - **voice:** `work` → `00-resources/voice-work.md`; `home`/`shared` → `00-resources/voice-principles.md`.
+   - **pad board:** `work` → `work`; `home`/`shared` → `command-center`. Call `pad_set_workspace`
+     to it before creating any pad item.
+   - **outputs:** `work` → `outputs/work/<slug>`; `home`/`shared` → `outputs/home/<slug>`, where
+     `<slug>` = the folder name lowercased, spaces/underscores → hyphens.
 3. Treat the project's `attach:` paths as additional context for the session.
 4. Invoke any persona skills named in `skills:`.
-5. Target the board named in `pad-workspace:` for any pad item (call `pad_set_workspace` first).
-6. Write deliverables to the path in `outputs:`.
+5. **Overrides win:** if the header carries an explicit `voice:`, `pad-workspace:`, or `outputs:`,
+   use that instead of the derived value.
 
 If you are in a root/non-project Cowork chat with no project header, use the root CLAUDE.md
-routing table to pick a lane, then default `voice: home` until a project is in scope.
+routing table to pick a lane, then default to the home voice until a project is in scope.
 
 ## Memory system
 
@@ -175,15 +181,12 @@ heading). Fill the fields per the project's row in the table below.
 
 ```yaml
 ---
-lane: work                      # work | home | shared
-voice: work                     # home -> voice-principles.md, work -> voice-work.md
-pad-workspace: work             # command-center (home/shared) | work (work lane)
+lane: work                      # work | home | shared  — the only declared lane field
 skills:                         # persona/expertise skills to adopt at session start
-  - sn-spm-architect            # omit the list (use `skills: []`) if none
+  - sn-spm-architect            # use `skills: []` if none
 attach:                         # shared-context folders this project pulls
   - shared-context/_universal
   - shared-context/work/servicenow
-outputs: outputs/work/<project-slug>
 ---
 
 @../../shared-context/_universal/CLAUDE.md
@@ -194,21 +197,26 @@ outputs: outputs/work/<project-slug>
 # <Project>
 ```
 
-The `@import` line + the prose "Base layer" note go **immediately after the frontmatter, above the
-`# <Project>` heading** — they are how the project actually loads the universal base layer (see
-TASK-147's "Base-layer load — why both lines" for the rationale). Every project gets both lines, not
-just the frontmatter.
+The header declares only `lane`, `skills`, and `attach`. **`voice`, `pad-workspace`, and `outputs`
+are derived from `lane`** (by the rule in `_universal/CLAUDE.md`) and are **not** written into the
+header — normalizing to one source so they can't drift across 14 files. The `@import` line + the
+prose "Base layer" note go **immediately after the frontmatter, above the `# <Project>` heading** —
+they are how the project actually loads the universal base layer (see TASK-147's "Base-layer load —
+why both lines"). Every project gets both lines.
 
 **Field rules**
-- `lane` from the table. `voice` follows lane: work-lane → `work`, home/shared-lane → `home`
-  (shared uses the warmer home voice per the architecture; see the unification project's own note).
-- `pad-workspace`: work-lane → `work`; home/shared-lane → `command-center`.
-- `skills`: only the personas listed in the table (today: `sn-spm-architect` for the two
+- `lane` — from the table; the single declared hygiene field. `voice` / `pad-workspace` / `outputs`
+  **derive** from it (work → `voice-work.md` / `work` board / `outputs/work/<slug>`; home & shared →
+  `voice-principles.md` / `command-center` / `outputs/home/<slug>`). `<slug>` = folder name
+  lowercased, spaces/underscores → hyphens. Do **not** put these three in the header.
+- **Override (rare):** add an explicit `voice:`, `pad-workspace:`, or `outputs:` line *only* to
+  deviate from the derived value — e.g. `Capacity Managment`, whose folder name is misspelled, sets
+  `outputs: outputs/work/capacity-management` so the deliverable path reads correctly. Everything
+  else derives.
+- `skills` — only the personas listed in the table (today: `sn-spm-architect` for the two
   ServiceNow SPM projects). Everything else → `skills: []`.
-- `attach`: always include `shared-context/_universal`. Add the domain folders the project needs
-  (see per-project notes below).
-- `outputs`: `outputs/<lane>/<project-slug>` where `<lane>` is `work` or `home` (shared projects
-  use `home`). Slug = the project folder name, lowercased/hyphenated.
+- `attach` — always include `shared-context/_universal`. Add the domain folders the project needs
+  (see the table).
 - **base-layer load:** after the frontmatter, add the `@../../shared-context/_universal/CLAUDE.md`
   import line **and** the prose "Base layer" instruction (above). The prose line is the
   cross-surface guarantee; the import is the Claude Code convenience. Adjust `../../` if the project
@@ -225,47 +233,50 @@ remaining projects. The prose "Base layer" line can go in immediately — it has
 
 Add this rule so every session honors the header:
 
-> **Before acting in a project, read its lane-declaration header (the YAML block at the top of
-> the project's CLAUDE.md). Load the voice file it names, set the pad workspace it names (call
-> `pad_set_workspace` before creating any pad item), invoke the skills it lists, treat its
-> `attach:` paths as the session's context, and write deliverables to its `outputs:` path.**
+> **Before acting in a project, read its lane-declaration header (the YAML block at the top of the
+> project's CLAUDE.md). Derive voice, pad workspace, and outputs from its `lane` (call
+> `pad_set_workspace` to the derived board before creating any pad item), honoring any explicit
+> `voice:` / `pad-workspace:` / `outputs:` override; invoke the skills it lists; treat its `attach:`
+> paths as the session's context; and write deliverables to the derived (or overridden) outputs path.**
 
 ### Per-project classification + headers
 
-Apply to these active project folders under `./projects/`. Note `Capacity Managment` and
-`Knowledge Presentation` and `Work Email Triage` keep their existing (mis)spelled/spaced folder
-names — do not rename folders in this task; just add headers.
+Apply to these active project folders under `./projects/`. Each header carries only `lane`, `skills`,
+and `attach` — **voice / pad-workspace / outputs are derived from `lane`** (see field rules); the
+last column lists the rare overrides. Note `Capacity Managment`, `Knowledge Presentation`, and
+`Work Email Triage` keep their existing (mis)spelled/spaced folder names — do not rename folders in
+this task; just add headers.
 
-| Project folder | lane | voice | pad-workspace | skills | attach (beyond `_universal`) | outputs |
-|---|---|---|---|---|---|---|
-| Capacity Managment | work | work | work | `sn-spm-architect` | `shared-context/work/servicenow`, `shared-context/work/adt` | `outputs/work/capacity-management` |
-| nowaikit | work | work | work | `sn-spm-architect` | `shared-context/work/servicenow` | `outputs/work/nowaikit` |
-| Work Email Triage | work | work | work | — | `shared-context/work/adt` | `outputs/work/work-email-triage` |
-| Knowledge Presentation | work | work | work | — | `shared-context/work/adt` | `outputs/work/knowledge-presentation` |
-| onedrive-sync | work | work | work | — | — | `outputs/work/onedrive-sync` |
-| cancer-treatment | home | home | command-center | — | `shared-context/home/medical`, `shared-context/home/family` | `outputs/home/cancer-treatment` |
-| treatment-collab-suite | home | home | command-center | — | `shared-context/home/medical`, `shared-context/home/family` | `outputs/home/treatment-collab-suite` |
-| estate-claudeen-barkhausen | home | home | command-center | — | `shared-context/home/family` | `outputs/home/estate-claudeen-barkhausen` |
-| home-lab | home | home | command-center | — | — | `outputs/home/home-lab` |
-| Network_Segregation | home | home | command-center | — | — | `outputs/home/network-segregation` |
-| personal-knowledge-brain | home | home | command-center | — | — | `outputs/home/personal-knowledge-brain` |
-| worst-case-scenario | home | home | command-center | — | `shared-context/home/family` | `outputs/home/worst-case-scenario` |
-| helimath | home | home | command-center | — | — | `outputs/home/helimath` |
-| coworkos-unification | shared | home | command-center | — | `shared-context/_universal` | `outputs/home/coworkos-unification` |
+| Project folder | lane | skills | attach (beyond `_universal`) | override (only if non-derived) |
+|---|---|---|---|---|
+| Capacity Managment | work | `sn-spm-architect` | `shared-context/work/servicenow`, `shared-context/work/adt` | `outputs: outputs/work/capacity-management` (fix folder misspelling) |
+| nowaikit | work | `sn-spm-architect` | `shared-context/work/servicenow` | — |
+| Work Email Triage | work | — | `shared-context/work/adt` | — |
+| Knowledge Presentation | work | — | `shared-context/work/adt` | — |
+| onedrive-sync | work | — | — | — |
+| cancer-treatment | home | — | `shared-context/home/medical`, `shared-context/home/family` | — |
+| treatment-collab-suite | home | — | `shared-context/home/medical`, `shared-context/home/family` | — |
+| estate-claudeen-barkhausen | home | — | `shared-context/home/family` | — |
+| home-lab | home | — | — | — |
+| Network_Segregation | home | — | — | — |
+| personal-knowledge-brain | home | — | — | — |
+| worst-case-scenario | home | — | `shared-context/home/family` | — |
+| helimath | home | — | — | — |
+| coworkos-unification | shared | — | `shared-context/_universal` | — |
+
+Derived for reference: every `work` row → `voice-work.md` / `work` board / `outputs/work/<slug>`;
+every `home`/`shared` row → `voice-principles.md` / `command-center` / `outputs/home/<slug>`.
 
 **Example — `projects/nowaikit/CLAUDE.md` header (concrete):**
 
 ```markdown
 ---
 lane: work
-voice: work
-pad-workspace: work
 skills:
   - sn-spm-architect
 attach:
   - shared-context/_universal
   - shared-context/work/servicenow
-outputs: outputs/work/nowaikit
 ---
 
 @../../shared-context/_universal/CLAUDE.md
@@ -275,20 +286,18 @@ outputs: outputs/work/nowaikit
 
 # nowaikit
 ```
+*(voice `work`, board `work`, outputs `outputs/work/nowaikit` derive from `lane: work` — not declared.)*
 
 **Example — `projects/cancer-treatment/CLAUDE.md` header (concrete):**
 
 ```markdown
 ---
 lane: home
-voice: home
-pad-workspace: command-center
 skills: []
 attach:
   - shared-context/_universal
   - shared-context/home/medical
   - shared-context/home/family
-outputs: outputs/home/cancer-treatment
 ---
 
 @../../shared-context/_universal/CLAUDE.md
@@ -298,6 +307,7 @@ outputs: outputs/home/cancer-treatment
 
 # cancer-treatment
 ```
+*(voice `home`, board `command-center`, outputs `outputs/home/cancer-treatment` derive from `lane: home`.)*
 
 **Archive:** ensure `Jira-ALM Data Sync` lives under `./projects/_archive/` (TASK-148 handles the
 physical move if not already done); do not add a lane header to archived projects.
@@ -329,10 +339,10 @@ Create `outputs/work/` and `outputs/home/`. Per-project subfolders are created l
 
 **New output rule** (add to root CLAUDE.md, "Rules" section):
 
-> **Write every deliverable to the `outputs:` path named in the active project's lane header,
-> which resolves to `outputs/<lane>/<project>`. Never write deliverables to a project folder's
-> root. Code projects may use a project-local `outputs/` only for build scratch / intermediate
-> artifacts; final deliverables still go to the root lane path.**
+> **Write every deliverable to the active project's outputs path — `outputs/<lane>/<slug>`,
+> derived from its `lane` (or the explicit `outputs:` override if the header sets one). Never write
+> deliverables to a project folder's root. Code projects may use a project-local `outputs/` only for
+> build scratch / intermediate artifacts; final deliverables still go to the root lane path.**
 
 ### 142b — `voice-work.md`
 
@@ -342,7 +352,7 @@ context. Outline:
 ```markdown
 # Work Voice — ADT / ServiceNow SPM Register
 
-*Load this voice when the active project's lane header says `voice: work`.*
+*Load this voice when the active project's lane is `work` (derived; or an explicit `voice: work` override).*
 *This layers on top of, and where they conflict overrides, voice-principles.md for work-lane work.*
 
 ## Context
@@ -380,10 +390,11 @@ Make these edits to `./CLAUDE.md`:
 1. **Voice rule change.** Replace the standing "always read voice-principles.md before writing"
    instruction with:
 
-   > **Before producing any written content, read the voice file named in the active project's
-   > lane header (`voice: home` → `00-resources/voice-principles.md`; `voice: work` →
-   > `00-resources/voice-work.md`). In a non-project root chat, default to `voice-principles.md`
-   > unless the routing table puts you in the work lane.**
+   > **Before producing any written content, read the voice file for the active project's lane —
+   > derived from `lane` (`work` → `00-resources/voice-work.md`; `home`/`shared` →
+   > `00-resources/voice-principles.md`), or the explicit `voice:` override if the header sets one.
+   > In a non-project root chat, default to `voice-principles.md` unless the routing table puts you
+   > in the work lane.**
 
 2. **Add the lane-header standing instruction** (the wording from TASK-141 "Standing instruction").
 
@@ -607,14 +618,16 @@ collection lifecycle (`tasks` collection; statuses `backlog → ready → in-pro
 ### Wire `pad-workspace:` routing
 
 Every path that creates pad items must resolve the target workspace from the active project's
-`pad-workspace:` header and call `pad_set_workspace` **before** any create/update, using this logic:
+`lane` (deriving the board, since `pad-workspace` is no longer declared in the header) and call
+`pad_set_workspace` **before** any create/update, using this logic:
 
 ```text
 1. Determine active project (folder in scope, or the project named in the request).
-2. Read its CLAUDE.md lane-declaration block -> pad-workspace value.
-   - if pad-workspace == "work"            -> target = "work"
-   - if pad-workspace == "command-center"  -> target = "command-center"
-   - if no project in scope / no header    -> target = "command-center" (home default)
+2. Read its CLAUDE.md lane-declaration block -> lane (and any explicit pad-workspace override).
+   - derive board: if lane == "work"        -> target = "work"
+                   if lane == "home"|"shared"-> target = "command-center"
+   - if the header has an explicit pad-workspace: override -> use it instead
+   - if no project in scope / no header     -> target = "command-center" (home default)
 3. Call pad_set_workspace(workspace=target) BEFORE pad_item(action="create", ...).
 4. Create/update the item. Never create on the session-default board without this resolve step.
 ```
@@ -688,13 +701,10 @@ required): `src/` (or `app/`), `tests/`, `communications/`, and domain dirs as n
 
 ```markdown
 ---
-lane: home                      # work | home | shared  — set per project
-voice: home                     # home -> voice-principles.md, work -> voice-work.md
-pad-workspace: command-center   # command-center | work
+lane: home                      # work | home | shared  — set per project (the ONLY declared lane field)
 skills: []                      # persona skills, e.g. - sn-spm-architect
 attach:
   - shared-context/_universal   # add domain folders this project needs
-outputs: outputs/home/<project-slug>
 ---
 
 @../../shared-context/_universal/CLAUDE.md
@@ -704,6 +714,10 @@ outputs: outputs/home/<project-slug>
 > **Base layer:** before acting, read `shared-context/_universal/CLAUDE.md` and follow it on top of
 > this file. (The `@import` line above auto-loads it in Claude Code; this prose instruction is the
 > cross-surface guarantee — it loads the base layer in Cowork too.)
+>
+> **Derived from `lane`** (do not declare unless overriding): voice, pad-workspace, and outputs —
+> see `_universal/CLAUDE.md`. Add an explicit `voice:` / `pad-workspace:` / `outputs:` line only to
+> override the rule.
 
 ## Identity
 One paragraph: what this project is, what routes here, what doesn't.
