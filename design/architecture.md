@@ -1,6 +1,6 @@
 # CoworkOS Unification — Architecture & Design
 
-*Status: design (in progress) · Owner: David · Created: 2026-06-16*
+*Status: design — signed off (2026-06-16) · Owner: David · Created: 2026-06-16*
 *Tracking: pad PLAN-137 (command-center, project: general)*
 
 ---
