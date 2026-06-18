@@ -1,10 +1,10 @@
 # Status — CoworkOS Unification
 
-_Last updated: 2026-06-17_
+_Last updated: 2026-06-18_
 
 ## Phase
-**Spec — in review.** Memory section revised this session; awaiting David's sign-off on the
-revised memory tasks before build.
+**Build complete — final sign-off in review.** All build tasks (TASK-140 through TASK-148, TASK-167, TASK-143) done.
+TASK-145 (Playbook v3) delivered — awaiting David's review at `outputs/home/coworkos-unification/Cowork_Setup_Playbook_v3.md`.
 
 ## Done
 - Architecture signed off: Approach B (shared tree, lane-as-tag); per-project lane-declaration
@@ -34,13 +34,9 @@ revised memory tasks before build.
   aligned architecture §4. pad TASK-141/144/147 updated to match.
 
 ## Next
-1. **David — sign off the revised memory section** (TASK-167 primary / TASK-143 / TASK-169 were not
-   in the originally signed-off spec). Then move TASK-167/143/169 from `design` to build-ready.
-2. After spec sign-off, promote build tasks (140–144, 147, 148, 167) to `ready`.
-3. **TASK-144 (David)** — create the `Work` pad workspace (currently `ready`).
+- **David — review Playbook v3** at `outputs/home/coworkos-unification/Cowork_Setup_Playbook_v3.md`
+  (TASK-145, in pad `review`).
+- **TASK-146 (Final sign-off)** — David's consolidated human gate once Playbook v3 is approved.
 
 ## Open decisions / blockers
-- **Open:** the revised memory tasks (167/143/169) need David's design sign-off before build —
-  they extend the previously signed-off spec.
-- Note: TASK-167 (parent) won't close until its children 143/169 finish (pad open-children guard) —
-  intentional, treats memory as one unit.
+- None — all build tasks done. Waiting on David's Playbook v3 review and TASK-146 final sign-off.
