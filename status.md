@@ -4,7 +4,8 @@ _Last updated: 2026-06-18_
 
 ## Phase
 **Build complete — final sign-off in review.** All build tasks (TASK-140 through TASK-148, TASK-167, TASK-143) done.
-TASK-145 (Playbook v3) delivered — awaiting David's review at `outputs/home/coworkos-unification/Cowork_Setup_Playbook_v3.md`.
+TASK-145 (Playbook v3) revised per David's feedback — rewritten as a standalone fresh-start guide (no migration/delta framing).
+Deliverable: `outputs/home/coworkos-unification/Cowork_Setup_Playbook_v3.md` — in pad `review`.
 
 ## Done
 - Architecture signed off: Approach B (shared tree, lane-as-tag); per-project lane-declaration
