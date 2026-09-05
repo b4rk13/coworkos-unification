@@ -1,0 +1,178 @@
+{
+  "_comment": "Source of truth for MCP server definitions rendered into both Claude Code (.claude.json mcpServers) and Claude Desktop (claude_desktop_config.json mcpServers). No secret VALUES live here — env keys marked with {\"secretRef\": \"<server>.<ENV_KEY>\"} are resolved at render time by reading the current value out of the live Claude Desktop config (the superset that already holds every real secret in plaintext). See generate.js / README.md.",
+
+  "servers": {
+    "pad": {
+      "desktop": {
+        "command": "C:\\Users\\david\\AppData\\Local\\Programs\\pad\\pad.exe",
+        "args": ["mcp", "serve"]
+      },
+      "code": {
+        "command": "C:\\Users\\david\\AppData\\Local\\Programs\\pad\\pad.exe",
+        "args": ["mcp", "serve", "--workspace", "command-center"],
+        "env": {}
+      }
+    },
+
+    "notion-brain": {
+      "desktop": {
+        "command": "C:\\Users\\david\\AppData\\Roaming\\npm\\notion-mcp-server.cmd",
+        "args": [],
+        "env": {
+          "NOTION_TOKEN": { "secretRef": "notion-brain.NOTION_TOKEN" }
+        }
+      },
+      "code": {
+        "command": "npx",
+        "args": ["-y", "@notionhq/notion-mcp-server"],
+        "env": {
+          "NOTION_TOKEN": { "secretRef": "notion-brain.NOTION_TOKEN" }
+        }
+      }
+    },
+
+    "nowaikit": {
+      "desktop": {
+        "command": "C:\\Program Files\\nodejs\\node.exe",
+        "args": [
+          "C:\\Users\\david\\mcp-servers\\nowaikit\\node_modules\\nowaikit\\dist\\server.js"
+        ],
+        "env": {
+          "SERVICENOW_INSTANCE_URL": "https://adtdev.service-now.com",
+          "SERVICENOW_AUTH_METHOD": "oauth",
+          "WRITE_ENABLED": "true",
+          "SCRIPTING_ENABLED": "true",
+          "CMDB_WRITE_ENABLED": "true",
+          "ATF_ENABLED": "true",
+          "MCP_TOOL_PACKAGE": "full",
+          "SERVICENOW_OAUTH_CLIENT_ID": "7fa040ba7b284cb99cc6934b50021343",
+          "SERVICENOW_OAUTH_CLIENT_SECRET": { "secretRef": "nowaikit.SERVICENOW_OAUTH_CLIENT_SECRET" },
+          "SERVICENOW_OAUTH_USERNAME": "DavidBarkhausen",
+          "SERVICENOW_OAUTH_PASSWORD": { "secretRef": "nowaikit.SERVICENOW_OAUTH_PASSWORD" },
+          "SERVICENOW_AUTH_MODE": "per-user",
+          "NOW_ASSIST_ENABLED": "true",
+          "SN_INSTANCE_ENVIRONMENT": "development"
+        }
+      }
+    },
+
+    "Home Assistant": {
+      "desktop": {
+        "command": "C:\\Users\\david\\.local\\bin\\ha-mcp.exe",
+        "args": [],
+        "env": {
+          "HOMEASSISTANT_URL": "http://homeassistant.local:8123",
+          "HOMEASSISTANT_TOKEN": { "secretRef": "Home Assistant.HOMEASSISTANT_TOKEN" }
+        }
+      }
+    },
+
+    "unifi-network": {
+      "desktop": {
+        "command": "C:\\Users\\david\\.local\\bin\\unifi-network-mcp.exe",
+        "args": [],
+        "env": {
+          "UNIFI_HOST": "192.168.10.1",
+          "UNIFI_USERNAME": "claude",
+          "UNIFI_PASSWORD": { "secretRef": "unifi-network.UNIFI_PASSWORD" }
+        }
+      }
+    },
+
+    "unifi-protect": {
+      "desktop": {
+        "command": "C:\\Users\\david\\.local\\bin\\unifi-protect-mcp.exe",
+        "args": [],
+        "env": {
+          "UNIFI_HOST": "192.168.10.1",
+          "UNIFI_USERNAME": "claude",
+          "UNIFI_PASSWORD": { "secretRef": "unifi-protect.UNIFI_PASSWORD" }
+        }
+      }
+    },
+
+    "proxmox": {
+      "desktop": {
+        "command": "C:\\Users\\david\\ProxmoxMCP-Plus\\.venv\\Scripts\\python.exe",
+        "args": ["-m", "proxmox_mcp.server"],
+        "env": {
+          "PYTHONPATH": "C:\\Users\\david\\ProxmoxMCP-Plus\\src",
+          "PROXMOX_MCP_CONFIG": "C:\\Users\\david\\ProxmoxMCP-Plus\\proxmox-config\\config.json",
+          "PROXMOX_VERIFY_SSL": "false"
+        }
+      }
+    },
+
+    "proxmox2": {
+      "desktop": {
+        "command": "C:\\Users\\david\\ProxmoxMCP-Plus\\.venv\\Scripts\\python.exe",
+        "args": ["-m", "proxmox_mcp.server"],
+        "env": {
+          "PYTHONPATH": "C:\\Users\\david\\ProxmoxMCP-Plus\\src",
+          "PROXMOX_MCP_CONFIG": "C:\\Users\\david\\ProxmoxMCP-Plus\\proxmox-config\\config-homelab2.json",
+          "PROXMOX_VERIFY_SSL": "false"
+        }
+      }
+    },
+
+    "playwright": {
+      "desktop": {
+        "command": "C:\\Users\\david\\AppData\\Roaming\\npm\\playwright-mcp.cmd",
+        "args": []
+      }
+    },
+
+    "n8n-mcp": {
+      "desktop": {
+        "command": "C:\\Users\\david\\AppData\\Roaming\\npm\\n8n-mcp.cmd",
+        "args": [],
+        "env": {
+          "MCP_MODE": "stdio",
+          "LOG_LEVEL": "error",
+          "DISABLE_CONSOLE_OUTPUT": "true",
+          "N8N_API_URL": "https://n8n.barkie.io",
+          "N8N_API_KEY": { "secretRef": "n8n-mcp.N8N_API_KEY" }
+        }
+      }
+    },
+
+    "github": {
+      "desktop": {
+        "command": "docker",
+        "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server"],
+        "env": {
+          "GITHUB_PERSONAL_ACCESS_TOKEN": { "secretRef": "github.GITHUB_PERSONAL_ACCESS_TOKEN" }
+        }
+      }
+    },
+
+    "1password": {
+      "desktop": {
+        "command": "C:\\Users\\david\\AppData\\Local\\Microsoft\\WinGet\\Packages\\AgileBits.1Password.CLI_Microsoft.Winget.Source_8wekyb3d8bbwe\\op.exe",
+        "args": [
+          "run",
+          "--env-file",
+          "C:\\Users\\david\\OneDrive\\Documents\\CoworkOS-Home\\projects\\home-lab\\.env",
+          "--",
+          "C:\\Program Files\\nodejs\\node.exe",
+          "C:\\Users\\david\\OneDrive\\Documents\\CoworkOS-Home\\projects\\1password-mcp\\dist\\index.js"
+        ]
+      }
+    }
+  },
+
+  "renderTargets": {
+    "code": {
+      "servers": ["pad", "notion-brain", "nowaikit"],
+      "wrapType": "stdio"
+    },
+    "desktop": {
+      "servers": [
+        "Home Assistant", "unifi-network", "unifi-protect", "proxmox",
+        "playwright", "nowaikit", "n8n-mcp", "pad", "notion-brain",
+        "github", "1password", "proxmox2"
+      ],
+      "wrapType": null
+    }
+  }
+}
